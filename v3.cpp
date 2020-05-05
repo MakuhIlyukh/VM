@@ -918,82 +918,82 @@ struct VM {
         List* com;
         // sum
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("sum")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(sum));
+        table->push_back(com);
         // subs
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("subs")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(subs));
+        table->push_back(com);
         // mult
-        com = new List();
-        table->push_back(com); 
+        com = new List(); 
         com->push_back(new String("mult")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(mult));
+        table->push_back(com);
         // div
-        com = new List();
-        table->push_back(com); 
+        com = new List(); 
         com->push_back(new String("div")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(div));
+        table->push_back(com);
         // mod
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("mod")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(mod));
+        table->push_back(com);
         // valeq
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("valeq")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(valeq));
+        table->push_back(com);
         // less
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("less")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(less));
+        table->push_back(com);
         // more
-        com = new List();
-        table->push_back(com); 
+        com = new List(); 
         com->push_back(new String("more")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(more));
+        table->push_back(com);
         // and
-        com = new List();
-        table->push_back(com); 
+        com = new List(); 
         com->push_back(new String("and")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(AND));
+        table->push_back(com);
         // or
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("or")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(OR));
+        table->push_back(com);
         // not
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("not")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(NOT));
+        table->push_back(com);
         // IF
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("if")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(NOT));
+        table->push_back(com);
         //while
         com = new List();
-        table->push_back(com); 
         com->push_back(new String("while")); // название
         com->push_back(new Bool(false)); // флаг встроенности
         com->push_back(new Function(NOT));
+        table->push_back(com);
         //
         // подготовка
     }
@@ -1003,12 +1003,12 @@ struct VM {
         //
         WSEML* w = majorProg->front();
         univ->set(7, program);
-        List* c;
+        univ->set(6, new NullPtr());
+        List* c ;
         List* l;
-        
-        while(((List*) w)->back() != nullptr) {
+        while(w != nullptr) {
             for (int i = 0; i < table->size(); i++)
-                if ( ((String*) ((List*) table->get(i))->get(0))->val == ((String*) ((List*) w))->val) {
+                if ( ((String*) ((List*) table->get(i))->get(0))->val == ((String*) ((List*) w)->get(0))->val) {
                     c = (List*) table->get(i);
                     break;
                 }
@@ -1021,14 +1021,27 @@ struct VM {
                 ((List*) w)->set(((List*) w)->size() - 1, l->front());
             }
                     
-            if (otherData == nullptr || otherData->kind == NULLPTR) 
+            if (univ->get(6) == nullptr || univ->get(6)->kind == NULLPTR) {
                 w = ((List*) w)->back();
-            else
+            }
+            else {
                 w = otherData;
+            }
         }
     }
 };
 
 int main() {
-    
+    VM v;
+    List* l = new List();
+    List* l2 = new List();
+    l2->push_back(new Int(3));
+    l2->push_back(new Int(4));
+    l->push_back(new String("sum"));
+    l->push_back(nullptr);
+    l->push_back(l2);
+    l->push_back(nullptr);
+    v.majorProg->push_back(l);
+    v.exec(nullptr);
+    cout << ((Int*) v.globVar->get(0))->val;
 }
