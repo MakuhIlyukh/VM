@@ -216,6 +216,51 @@ void set(WSEML* univ, WSEML* lval, WSEML* rval) { // DANGER
     }
 }
 // Реализация встроенных функций
+void setVal(WSEML* univ) {
+    List* globVar = (List* ) ((List*) univ)->get(1);
+    List* stack = (List* ) ((List*) univ)->get(3);
+    List* com = (List*) stack->back();
+    // com = ['sum', ["i"]-указатель на res, [c-указатель на lval-команду, c-указатель на rval-команду]]
+    //          0             1                           2,0                        2, 1
+    // получаем значение lval
+    WSEML* lval = ((List*) com->get(2))->get(0);
+    WSEML* rval = ((List*) com->get(2))->get(1);
+    
+    set(univ, lval, rval);
+}
+void write(WSEML* univ) {
+  List* globVar = (List* ) ((List*) univ)->get(1);
+    List* stack = (List* ) ((List*) univ)->get(3);
+    List* com = (List*) stack->back();
+    // com = ['sum', ["i"]-указатель на res, [c-указатель на lval-команду, c-указатель на rval-команду]]
+    //          0             1                           2,0                        2, 1
+    // получаем значение lval
+    WSEML* lval = get(univ, ((List*) com->get(2))->get(0));
+    
+    WSEML* res;
+    switch(lval->kind) {
+        case INT:
+            cout << ((Int*) lval)->val;
+            break;
+            
+        case FLOAT:
+            cout << ((Float*) lval)->val;
+            break;
+            
+        case STRING:
+            cout << ((String*) lval)->val;
+            break;
+            
+        case BOOL:
+            cout << ((Bool*) lval)->val;
+            break;
+            
+        case CHAR:
+            cout << ((Char*) lval)->val;
+            break;
+    }
+    
+}
 void sum(WSEML* univ) { // сумма
     List* globVar = (List* ) ((List*) univ)->get(1);
     List* stack = (List* ) ((List*) univ)->get(3);
@@ -832,7 +877,7 @@ void IF(WSEML* univ) {
     //          0             1                           2,0                        2, 1
     // получаем значение lval
     WSEML* lval = get(univ, ((List*) com->get(2))->get(0));
-    WSEML* rval = get(univ, ((List*) com->get(2))->get(1));
+    WSEML* rval = ((List*) com->get(2))->get(1);
     
     if (((Bool*) lval)->val == true) {
         ((List*) univ)->set(6, rval);
@@ -847,7 +892,7 @@ void WHILE(WSEML* univ) {
     //          0             1                           2,0                        2, 1
     // получаем значение lval
     WSEML* lval = get(univ, ((List*) com->get(2))->get(0));
-    WSEML* rval = get(univ, ((List*) com->get(2))->get(1));
+    WSEML* rval = ((List*) com->get(2))->get(1);
     
     if (((Bool*) lval)->val == true) {
         ((List*) univ)->set(6, rval);
@@ -986,15 +1031,26 @@ struct VM {
         com = new List();
         com->push_back(new String("if")); // название
         com->push_back(new Bool(false)); // флаг встроенности
-        com->push_back(new Function(NOT));
+        com->push_back(new Function(IF));
         table->push_back(com);
         //while
         com = new List();
         com->push_back(new String("while")); // название
         com->push_back(new Bool(false)); // флаг встроенности
-        com->push_back(new Function(NOT));
+        com->push_back(new Function(WHILE));
         table->push_back(com);
-        //
+        //setVal
+        com = new List();
+        com->push_back(new String("setVal")); // название
+        com->push_back(new Bool(false)); // флаг встроенности
+        com->push_back(new Function(setVal));
+        table->push_back(com);
+        // write
+        com = new List();
+        com->push_back(new String("write")); // название
+        com->push_back(new Bool(false)); // флаг встроенности
+        com->push_back(new Function(write));
+        table->push_back(com);
         // подготовка
     }
     void exec(WSEML* program) {
@@ -1025,7 +1081,8 @@ struct VM {
                 w = ((List*) w)->back();
             }
             else {
-                w = otherData;
+                w = univ->get(6);
+                univ->set(6, nullptr);
             }
         }
     }
@@ -1034,14 +1091,113 @@ struct VM {
 int main() {
     VM v;
     List* l = new List();
-    List* l2 = new List();
-    l2->push_back(new Int(3));
-    l2->push_back(new Int(4));
-    l->push_back(new String("sum"));
-    l->push_back(nullptr);
-    l->push_back(l2);
-    l->push_back(nullptr);
-    v.majorProg->push_back(l);
+    List* l2;
+    
+    /*
+     * [
+     *      [ write, nullptr, [new String("Hello world\n")], com1]
+     *      [ setVal, nullptr, [ [i, [1, 0]], new Int(0) ], com2]      com1
+     *      [ less, nullptr, [ [i, [1, 0]], new Int(10) ], com3 ]       com2
+     *      [ while, nullptr, [ [i, [1, 1]], com4 ], nullptr]             com3
+     *          [ write, nullptr, [[i, [1, 0]], com5]             com4
+     *          [ sum, nullptr, [ [i, [1, 0]], new Int(1) ], com6 ]     com5    
+     *          [ setVal, nullptr, [ [i, [1, 0]], com5], com7 ]         com6
+     *          [ less, nullptr, [ [i, [1, 0]], new Int(10)], com8) ] ]   com7  
+     *          [ setVal, nullptr, [ [i, [1, 1]], com7], com3]        com8
+     * ]
+     */
+   
+    v.globVar->push_back(new Int());
+    
+    List* i10 = new List();
+    i10->push_back(new String("i"));
+    l2 = new List();
+    l2->push_back(new Int(1));
+    l2->push_back(new Int(0));
+    i10->push_back(l2);
+    
+    List* i11 = new List();
+    i11->push_back(new String("i"));
+    l2 = new List();
+    l2->push_back(new Int(1));
+    l2->push_back(new Int(1));
+    i11->push_back(l2);;
+    
+    
+    for (int i = 0; i < 9; i++)
+        l->push_back(new List());
+    
+    ((List*) l->get(0))->push_back(new String("write"));
+    ((List*) l->get(0))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(new String("Hello world\n"));
+    ((List*) l->get(0))->push_back(l2);
+    ((List*) l->get(0))->push_back(l->get(1));
+    
+    ((List*) l->get(1))->push_back(new String("setVal"));
+    ((List*) l->get(1))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i10);
+    l2->push_back(new Int(0));
+    ((List*) l->get(1))->push_back(l2);
+    ((List*) l->get(1))->push_back(l->get(2));
+    
+    ((List*) l->get(2))->push_back(new String("less"));
+    ((List*) l->get(2))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i10);
+    l2->push_back(new Int(10));
+    ((List*) l->get(2))->push_back(l2);
+    ((List*) l->get(2))->push_back(l->get(3));
+    
+    ((List*) l->get(3))->push_back(new String("while"));
+    ((List*) l->get(3))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i11);
+    l2->push_back(l->get(4));
+    ((List*) l->get(3))->push_back(l2);
+    ((List*) l->get(3))->push_back(nullptr);
+    
+    ((List*) l->get(4))->push_back(new String("write"));
+    ((List*) l->get(4))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i10);
+    ((List*) l->get(4))->push_back(l2);
+    ((List*) l->get(4))->push_back(l->get(5));
+    
+    ((List*) l->get(5))->push_back(new String("sum"));
+    ((List*) l->get(5))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i10);
+    l2->push_back(new Int(1));
+    ((List*) l->get(5))->push_back(l2);
+    ((List*) l->get(5))->push_back(l->get(6));
+    
+    ((List*) l->get(6))->push_back(new String("setVal"));
+    ((List*) l->get(6))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i10);
+    l2->push_back(l->get(5));
+    ((List*) l->get(6))->push_back(l2);
+    ((List*) l->get(6))->push_back(l->get(7));
+    
+    ((List*) l->get(7))->push_back(new String("less"));
+    ((List*) l->get(7))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i10);
+    l2->push_back(new Int(10));
+    ((List*) l->get(7))->push_back(l2);
+    ((List*) l->get(7))->push_back(l->get(8));
+    
+    ((List*) l->get(8))->push_back(new String("setVal"));
+    ((List*) l->get(8))->push_back(nullptr);
+    l2 = new List();
+    l2->push_back(i11);
+    l2->push_back(l->get(7));
+    ((List*) l->get(8))->push_back(l2);
+    ((List*) l->get(8))->push_back(l->get(3));
+    
+    
+    v.majorProg->push_back(l->get(0));
     v.exec(nullptr);
-    cout << ((Int*) v.globVar->get(0))->val;
 }
