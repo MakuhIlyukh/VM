@@ -441,7 +441,7 @@ int main() {
     
     //  
     //write 3 * 2.5
-    //
+    //7.5
     float* pc = new float(123545);
     int* pa = new int(3);
     float* pb = new float(2.5);
